@@ -44,6 +44,22 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE INDEX IF NOT EXISTS events_host_at ON events(host_id, at DESC);
 `);
 
+/** Adds a column to an existing database without a migration framework. */
+function addColumn(table: string, column: string, definition: string) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  if (!columns.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
+// Health, learned by polling each joined host over SSH.
+addColumn("hosts", "reachable", "INTEGER");
+addColumn("hosts", "last_seen", "INTEGER");
+addColumn("hosts", "last_check_at", "INTEGER");
+addColumn("hosts", "check_error", "TEXT");
+addColumn("hosts", "check_error_kind", "TEXT");
+addColumn("hosts", "network_backend", "TEXT");
+
 export type HostRow = {
   id: string;
   name: string;
@@ -62,6 +78,12 @@ export type HostRow = {
   last_error: string | null;
   created_at: number;
   joined_at: number | null;
+  reachable: number | null;
+  last_seen: number | null;
+  last_check_at: number | null;
+  check_error: string | null;
+  check_error_kind: string | null;
+  network_backend: string | null;
 };
 
 export function logEvent(hostId: string | null, kind: string, message: string, detail?: unknown) {

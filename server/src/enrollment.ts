@@ -73,15 +73,19 @@ export function lookupToken(token: string): TokenLookup {
 }
 
 /**
+ * Reads a script destined for a Debian box. Line endings are normalized: a
+ * CRLF checkout on Windows would break the shebang the moment it lands there.
+ */
+export function readScript(name: string): string {
+  return fs.readFileSync(path.join(config.scriptsDir, name), "utf8").replace(/\r\n/g, "\n");
+}
+
+/**
  * Renders install.sh for one specific host. Everything the remote needs to
  * trust us, and everything we need to trust it, is decided here.
  */
 export function renderInstallScript(host: HostRow, hubUrl: string): string {
-  // Normalize line endings: a CRLF checkout on Windows would break the
-  // shebang the moment this lands on a Debian box.
-  const template = fs
-    .readFileSync(path.join(config.scriptsDir, "install.sh"), "utf8")
-    .replace(/\r\n/g, "\n");
+  const template = readScript("install.sh");
   const { publicKey } = ensureHubKey();
 
   const substitutions: Record<string, string> = {
@@ -112,6 +116,7 @@ export type EnrollReport = {
   host_key: string;
   address: string;
   address_pending?: number;
+  network_backend?: string;
   facts: Record<string, unknown>;
 };
 
@@ -125,7 +130,9 @@ export function completeEnrollment(host: HostRow, report: EnrollReport): HostRow
     `UPDATE hosts
         SET status = 'joined', token_used_at = @now, joined_at = @now, last_error = NULL,
             address = @address, ssh_user = @sshUser, ssh_port = @sshPort,
-            host_key = @hostKey, facts = @facts
+            host_key = @hostKey, facts = @facts, network_backend = @backend,
+            reachable = NULL, last_seen = NULL, last_check_at = NULL,
+            check_error = NULL, check_error_kind = NULL
       WHERE id = @id`
   ).run({
     id: host.id,
@@ -134,6 +141,7 @@ export function completeEnrollment(host: HostRow, report: EnrollReport): HostRow
     sshUser: report.ssh_user || host.ssh_user,
     sshPort: report.ssh_port || 22,
     hostKey: report.host_key,
+    backend: report.network_backend ?? null,
     facts: JSON.stringify(report.facts ?? {}),
   });
 

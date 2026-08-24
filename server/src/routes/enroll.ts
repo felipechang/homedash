@@ -3,6 +3,7 @@ import {
   completeEnrollment,
   failEnrollment,
   lookupToken,
+  readScript,
   renderInstallScript,
   type EnrollReport,
 } from "../enrollment.js";
@@ -15,6 +16,15 @@ const TOKEN_ERRORS = {
 } as const;
 
 export async function enrollRoutes(app: FastifyInstance) {
+  /**
+   * The fact collector, fetched by install.sh during enrollment. It is a
+   * read-only script with nothing host-specific in it, so it needs no token.
+   */
+  app.get("/facts.sh", async (_req, reply) => {
+    reply.type("text/x-shellscript; charset=utf-8");
+    return readScript("facts.sh");
+  });
+
   /**
    * The endpoint the one-liner hits. Serves a script rendered for exactly one
    * host, carrying the hub's public key and that host's callback token.

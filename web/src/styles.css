@@ -126,14 +126,25 @@ h3 { font-size: 1rem; margin: 0; }
   flex-direction: column;
   gap: 0.85rem;
 }
-.card-pending { border-left: 3px solid var(--warn); }
-.card-joined { border-left: 3px solid var(--ok); }
-.card-failed { border-left: 3px solid var(--bad); }
+.card-ok   { border-left: 3px solid var(--ok); }
+.card-warn { border-left: 3px solid var(--warn); }
+.card-bad  { border-left: 3px solid var(--bad); }
+.card-idle { border-left: 3px solid var(--line); }
 
 .card-head { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
 .card-note { color: var(--muted); margin: 0; font-size: 0.9rem; }
 .card-note.error { color: var(--bad); }
-.card-actions { display: flex; justify-content: flex-end; margin-top: auto; }
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+.card-actions .btn + .btn { margin-left: 0; }
+
+/* Pushes the timestamp to the left and the buttons to the right. */
+.check-stamp { margin-right: auto; }
 
 .pill {
   font-size: 0.75rem;
@@ -143,9 +154,10 @@ h3 { font-size: 1rem; margin: 0; }
   background: var(--surface-2);
   color: var(--muted);
 }
-.pill-joined { color: var(--ok); }
-.pill-pending { color: var(--warn); }
-.pill-failed { color: var(--bad); }
+.pill-ok   { color: var(--ok); }
+.pill-warn { color: var(--warn); }
+.pill-bad  { color: var(--bad); }
+.pill-idle { color: var(--muted); }
 
 .specs { margin: 0; display: grid; gap: 0.3rem; font-size: 0.875rem; }
 .specs > div { display: grid; grid-template-columns: 80px 1fr; gap: 0.5rem; }

@@ -11,9 +11,13 @@ export type Facts = {
   disk_free_gb?: number;
   iface?: string;
   mac?: string;
-  network_backend?: string;
   docker?: string;
   compose?: string;
+  load1?: number;
+  mem_available_mb?: number;
+  uptime_s?: number;
+  containers_running?: number;
+  containers_total?: number;
 };
 
 export type Host = {
@@ -29,8 +33,19 @@ export type Host = {
   createdAt: number;
   joinedAt: number | null;
   wantIp: string | null;
+  networkBackend: string | null;
+  /** null until the hub has actually tried to SSH in. */
+  reachable: boolean | null;
+  lastSeen: number | null;
+  lastCheckAt: number | null;
+  checkError: string | null;
+  checkErrorKind: string | null;
   enrollment: { expiresAt: number; command: string } | null;
 };
+
+export type CheckResult =
+  | { reachable: true; facts: Facts }
+  | { reachable: false; error: string; kind: string };
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -54,4 +69,7 @@ export const api = {
     request<{ host: Host }>(`/api/hosts/${id}/reissue`, { method: "POST" }).then((r) => r.host),
 
   removeHost: (id: string) => request<void>(`/api/hosts/${id}`, { method: "DELETE" }),
+
+  check: (id: string) =>
+    request<{ result: CheckResult; host: Host }>(`/api/hosts/${id}/check`, { method: "POST" }),
 };

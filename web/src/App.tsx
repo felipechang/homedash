@@ -27,7 +27,7 @@ export function App() {
 
   // A machine can join at any moment during enrollment, so poll while we wait.
   useEffect(() => {
-    const waiting = hosts?.some((h) => h.status === "pending");
+    const waiting = hosts?.some((h) => h.status === "pending" || h.reachable === null);
     if (!waiting) return;
     const timer = setInterval(() => void refresh(), 3000);
     return () => clearInterval(timer);
@@ -102,6 +102,9 @@ export function App() {
                       await api.removeHost(h.id);
                       await refresh();
                     }}
+                    onChecked={(fresh) =>
+                      setHosts((prev) => prev?.map((x) => (x.id === fresh.id ? fresh : x)) ?? prev)
+                    }
                   />
                 ))}
               </div>

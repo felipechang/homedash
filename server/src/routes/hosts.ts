@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { config } from "../config.js";
 import { db, type HostRow } from "../db.js";
 import { ensureHubKey } from "../keys.js";
+import { checkHost } from "../health.js";
 import {
   createPendingHost,
   deleteHost,
@@ -37,6 +38,12 @@ function present(host: HostRow, req: FastifyRequest) {
     createdAt: host.created_at,
     joinedAt: host.joined_at,
     wantIp: host.want_ip,
+    networkBackend: host.network_backend,
+    reachable: host.reachable === null ? null : host.reachable === 1,
+    lastSeen: host.last_seen,
+    lastCheckAt: host.last_check_at,
+    checkError: host.check_error,
+    checkErrorKind: host.check_error_kind,
     enrollment: tokenLive
       ? {
           expiresAt: host.token_expires,
@@ -98,6 +105,19 @@ export async function hostRoutes(app: FastifyInstance) {
     const host = getHost(id);
     if (!host) return reply.code(404).send({ error: "No such host." });
     return { host: present(host, req) };
+  });
+
+  /** Proves the SSH path still works and refreshes this host's specs. */
+  app.post("/api/hosts/:id/check", async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const host = getHost(id);
+    if (!host) return reply.code(404).send({ error: "No such host." });
+    if (host.status !== "joined") {
+      return reply.code(409).send({ error: "This machine has not finished enrolling yet." });
+    }
+
+    const result = await checkHost(host);
+    return { result, host: present(getHost(id)!, req) };
   });
 
   app.get("/api/hosts/:id/events", async (req) => {

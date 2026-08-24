@@ -136,21 +136,14 @@ install -d -m 0755 -o "$SSH_USER" -g "$SSH_USER" /opt/homedash/stacks
 # ------------------------------------------------------------------- facts ---
 
 say "Collecting machine specs"
-FACT_HOSTNAME="$(hostname -f 2>/dev/null || hostname)"
-FACT_OS="$(. /etc/os-release 2>/dev/null && printf '%s' "${PRETTY_NAME:-unknown}")"
-FACT_KERNEL="$(uname -r)"
-FACT_ARCH="$(dpkg --print-architecture 2>/dev/null || uname -m)"
-FACT_CPU_MODEL="$(awk -F': ' '/model name/{print $2; exit}' /proc/cpuinfo)"
-[ -n "$FACT_CPU_MODEL" ] || FACT_CPU_MODEL="$(awk -F': ' '/^Model/{print $2; exit}' /proc/cpuinfo)"
-[ -n "$FACT_CPU_MODEL" ] || FACT_CPU_MODEL="unknown"
-FACT_CPU_CORES="$(nproc)"
-FACT_MEM_MB="$(awk '/MemTotal/{printf "%d", $2/1024}' /proc/meminfo)"
-FACT_DISK_GB="$(df -BG --output=size / | tail -1 | tr -dc '0-9')"
-FACT_DISK_FREE_GB="$(df -BG --output=avail / | tail -1 | tr -dc '0-9')"
-FACT_MAC="$(cat "/sys/class/net/$PRIMARY_IFACE/address" 2>/dev/null || echo unknown)"
-FACT_DOCKER="$(docker --version 2>/dev/null | sed 's/,.*//' || echo none)"
-FACT_COMPOSE="$(docker compose version --short 2>/dev/null || echo none)"
-FACT_VIRT="$(systemd-detect-virt 2>/dev/null || echo unknown)"
+
+# The fact collector lives on the hub so enrollment and every later heartbeat
+# report the same shape. Keeping a copy here makes it easy to run by hand.
+curl -fsSL --max-time 20 "$HUB_URL/facts.sh" -o /opt/homedash/facts.sh \
+  || die "Could not download the fact collector from $HUB_URL."
+chmod 0755 /opt/homedash/facts.sh
+FACTS_JSON="$(bash /opt/homedash/facts.sh)" || die "Could not read this machine's specs."
+
 SSH_PORT="$(awk '/^Port /{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null)"
 [ -n "${SSH_PORT:-}" ] || SSH_PORT=22
 
@@ -165,23 +158,8 @@ PAYLOAD=$(cat <<PAYLOAD_EOF
   "host_key": $(json_str "$HOST_KEY"),
   "address": $(json_str "$TARGET_IP"),
   "address_pending": $IP_CHANGES,
-  "facts": {
-    "hostname": $(json_str "$FACT_HOSTNAME"),
-    "os": $(json_str "$FACT_OS"),
-    "kernel": $(json_str "$FACT_KERNEL"),
-    "arch": $(json_str "$FACT_ARCH"),
-    "virt": $(json_str "$FACT_VIRT"),
-    "cpu_model": $(json_str "$FACT_CPU_MODEL"),
-    "cpu_cores": $FACT_CPU_CORES,
-    "mem_mb": $FACT_MEM_MB,
-    "disk_gb": $FACT_DISK_GB,
-    "disk_free_gb": $FACT_DISK_FREE_GB,
-    "iface": $(json_str "$PRIMARY_IFACE"),
-    "mac": $(json_str "$FACT_MAC"),
-    "network_backend": $(json_str "$NET_BACKEND"),
-    "docker": $(json_str "$FACT_DOCKER"),
-    "compose": $(json_str "$FACT_COMPOSE")
-  }
+  "network_backend": $(json_str "$NET_BACKEND"),
+  "facts": $FACTS_JSON
 }
 PAYLOAD_EOF
 )
@@ -205,4 +183,4 @@ if [ "$IP_CHANGES" -eq 1 ]; then
   esac
 fi
 
-say "Done. $FACT_HOSTNAME is now managed by homedash."
+say "Done. $(hostname) is now managed by homedash."

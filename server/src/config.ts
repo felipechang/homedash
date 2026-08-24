@@ -20,4 +20,6 @@ export const config = {
   publicUrl: process.env.HOMEDASH_PUBLIC_URL ?? null,
   /** Enrollment tokens are single-use and short-lived. */
   enrollTtlMs: Number(process.env.HOMEDASH_ENROLL_TTL_MS ?? 30 * 60 * 1000),
+  /** How often joined hosts are polled over SSH. 0 disables the sweep. */
+  heartbeatMs: Number(process.env.HOMEDASH_HEARTBEAT_MS ?? 60 * 1000),
 };
