@@ -54,6 +54,7 @@ cmd_up() {
   ensure_ssh_key
   ensure_network
   mkdir -p "$LAB_DIR"
+  ensure_qemu_search_access
 
   if virsh dominfo "$VM_NAME" >/dev/null 2>&1; then
     say "$VM_NAME already exists, skipping creation."
@@ -78,8 +79,17 @@ cmd_up() {
       --noautoconsole
 
     say "Waiting for the install to finish and Proxmox to come up (this can take 10-20 min)..."
-    local ip="" waited=0 timeout=2400
+    local ip="" waited=0 timeout=2400 restarted=0
     while [ -z "$ip" ] && [ "$waited" -lt "$timeout" ]; do
+      # The unattended install powers the VM off when it finishes (it doesn't
+      # reboot itself) — a stale DHCP lease can still be on file at that point,
+      # so check state, not just vm_ip, before deciding we're done waiting.
+      if [ "$(virsh domstate "$VM_NAME" 2>/dev/null)" = "shut off" ]; then
+        [ "$restarted" -eq 0 ] || die "$VM_NAME shut off again unexpectedly — check with: virt-viewer --connect qemu:///system $VM_NAME"
+        say "Install finished (it powers off when done) — starting $VM_NAME"
+        virsh start "$VM_NAME" >/dev/null
+        restarted=1
+      fi
       ip="$(vm_ip || true)"
       [ -n "$ip" ] || { sleep 15; waited=$((waited + 15)); }
     done

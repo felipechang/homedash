@@ -34,10 +34,10 @@ that, unmodified, to build L2.
 ```
 
 `up` prints the node's IP, web UI URL, and root password (also saved to
-`$HOME/homedash-lab/root-password`). Then:
+`$HOME/.homedash/root-password`). Then:
 
 ```bash
-ssh -i ~/homedash-lab/ssh/id_ed25519 root@<ip>
+ssh -i ~/.homedash/ssh/id_ed25519 root@<ip>
 /root/homedash-test/setup-test-vms.sh up      # builds the L2 Debian test VMs
 ```
 
@@ -69,7 +69,7 @@ Env vars — see [`lib.sh`](lib.sh) for the full list:
 
 | Variable | Default | |
 | --- | --- | --- |
-| `HOMEDASH_LAB_DIR` | `~/homedash-lab` | ISO cache, disk image, SSH key, root password |
+| `HOMEDASH_LAB_DIR` | `~/.homedash` | ISO cache, disk image, SSH key, root password |
 | `PVE_ISO_URL` | Proxmox VE 9.2-1 | source ISO |
 | `VM_MEMORY_MB` / `VM_VCPUS` / `VM_DISK_GB` | `8192` / `6` / `64` | Proxmox VM sizing |
 | `NET_CIDR` / `NET_GATEWAY` | `10.20.30.0/24` / `.1` | libvirt network Proxmox + its nested VMs share |

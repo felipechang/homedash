@@ -2,7 +2,7 @@
 #
 # Shared config and helpers for the scripts in this directory. Sourced, not run.
 
-LAB_DIR="${HOMEDASH_LAB_DIR:-$HOME/homedash-lab}"
+LAB_DIR="${HOMEDASH_LAB_DIR:-$HOME/.homedash}"
 SSH_KEY="$LAB_DIR/ssh/id_ed25519"
 ROOT_PASSWORD_FILE="$LAB_DIR/root-password"
 
@@ -15,7 +15,7 @@ PVE_KEYBOARD="${PVE_KEYBOARD:-en-us}"
 PVE_COUNTRY="${PVE_COUNTRY:-us}"
 PVE_FQDN="${PVE_FQDN:-pve.homedash.lab}"
 PVE_MAILTO="${PVE_MAILTO:-root@homedash.lab}"
-PVE_TIMEZONE="${PVE_TIMEZONE:-Etc/UTC}"
+PVE_TIMEZONE="${PVE_TIMEZONE:-UTC}"
 
 NET_NAME="${NET_NAME:-homedash-pve}"
 NET_BRIDGE="${NET_BRIDGE:-virbr-hpve}"
@@ -45,6 +45,20 @@ ensure_ssh_key() {
     chmod 700 "$(dirname "$SSH_KEY")"
     ssh-keygen -t ed25519 -N "" -C "homedash-pve-vm" -f "$SSH_KEY" >/dev/null
   fi
+}
+
+ensure_qemu_search_access() {
+  command -v setfacl >/dev/null 2>&1 \
+    || die "setfacl not found — install the 'acl' package (see setup-host.sh) so libvirt-qemu can reach $LAB_DIR"
+  local dir="$LAB_DIR" mode
+  while [ "$dir" != "/" ]; do
+    mode="$(stat -c '%a' "$dir")"
+    if [ $(( 0$mode & 0001 )) -eq 0 ] && ! getfacl -p "$dir" 2>/dev/null | grep -q '^user:libvirt-qemu:.*x$'; then
+      setfacl -m u:libvirt-qemu:--x "$dir" \
+        || warn "Couldn't grant libvirt-qemu search access to $dir — the hypervisor may not be able to read the VM disk/ISO."
+    fi
+    dir="$(dirname "$dir")"
+  done
 }
 
 vm_mac() {

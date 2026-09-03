@@ -7,8 +7,10 @@
 # Not part of homedash — test scaffolding for the Proxmox-in-a-VM path.
 FROM debian:trixie-slim
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates wget gnupg xorriso \
+  && apt-get install -y --no-install-recommends ca-certificates wget gnupg xorriso tzdata \
   && wget -qO /usr/share/keyrings/proxmox-archive-keyring.gpg \
        https://enterprise.proxmox.com/debian/proxmox-archive-keyring-trixie.gpg \
   && echo "deb [signed-by=/usr/share/keyrings/proxmox-archive-keyring.gpg] http://download.proxmox.com/debian/pve trixie pve-no-subscription" \

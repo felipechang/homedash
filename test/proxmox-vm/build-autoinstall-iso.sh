@@ -78,5 +78,7 @@ docker run --rm -v "$LAB_DIR:/work" "$ISO_TOOL_IMAGE" \
   --answer-file /work/answer.toml \
   --output /work/autoinstall.iso
 
+[ -f "$LAB_DIR/autoinstall.iso" ] || die "prepare-iso reported success but $LAB_DIR/autoinstall.iso doesn't exist — check the answer.toml errors above."
+
 say "Autoinstall ISO ready: $LAB_DIR/autoinstall.iso"
 say "Generated root password saved to $ROOT_PASSWORD_FILE"

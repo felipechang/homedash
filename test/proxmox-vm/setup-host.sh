@@ -19,7 +19,7 @@ apt-get update
 apt-get install -y \
   qemu-system-x86 qemu-utils \
   libvirt-daemon-system libvirt-clients \
-  virtinst bridge-utils sshpass
+  virtinst bridge-utils sshpass acl
 
 echo "==> Enabling libvirtd"
 systemctl enable --now libvirtd
