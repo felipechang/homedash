@@ -1,0 +1,5 @@
+*.iso
+*.qcow2
+answer.toml
+root-password
+.ssh/

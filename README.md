@@ -110,6 +110,9 @@ server/
     facts.sh         machine specs, used by both enrollment and heartbeats
 web/
   src/               React control panel
+test/
+  proxmox/           spins up Debian VMs on a Proxmox node to test enrollment against
+  proxmox-vm/        virtualizes that Proxmox node itself, on your dev machine
 ```
 
 ## Developing on Windows
