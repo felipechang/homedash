@@ -131,6 +131,9 @@ cmd_status() {
   virsh dominfo "$VM_NAME" | grep -E '^(Name|State)'
   local ip; ip="$(vm_ip || true)"
   echo "IP: ${ip:-<none yet>}"
+  if [ -n "$ip" ]; then
+    echo "Web UI: https://$ip:8006"
+  fi
   echo "Snapshots:"
   virsh snapshot-list "$VM_NAME" 2>/dev/null || true
   echo

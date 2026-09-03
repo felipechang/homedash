@@ -110,10 +110,39 @@ server/
     facts.sh         machine specs, used by both enrollment and heartbeats
 web/
   src/               React control panel
+mcp/
+  src/
+    client.ts        thin fetch wrapper around the hub's HTTP API
+    index.ts          the MCP server: registers tools, speaks stdio
 test/
   proxmox/           spins up Debian VMs on a Proxmox node to test enrollment against
   proxmox-vm/        virtualizes that Proxmox node itself, on your dev machine
 ```
+
+## MCP server
+
+`mcp/` is a small [MCP](https://modelcontextprotocol.io) server that lets an
+assistant (Claude Code, Claude Desktop, etc.) manage homedash — list hosts,
+start an enrollment, check reachability, read events, delete a host. It talks
+to the hub over the same HTTP API the web panel uses, so it needs no SSH keys
+or database access of its own, and it can run anywhere that can reach the hub.
+
+It exposes the hub's typed operations, not a shell: there is no `run_on_host`
+tool here, in keeping with the policy-at-the-boundary design below.
+
+Build it once, then point an MCP client at it:
+
+```bash
+npm run build --workspace=mcp
+```
+
+```bash
+claude mcp add homedash -- node /path/to/homedash/mcp/dist/index.js
+```
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `HOMEDASH_URL` | `http://localhost:8080` | Base URL of the homedash hub to manage |
 
 ## Developing on Windows
 

@@ -5,11 +5,12 @@
   "description": "Home lab control panel: enroll Debian remotes, run apps, enforce policy.",
   "workspaces": [
     "server",
-    "web"
+    "web",
+    "mcp"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=server & npm run dev --workspace=web",
-    "build": "npm run build --workspace=web && npm run build --workspace=server",
+    "build": "npm run build --workspace=web && npm run build --workspace=server && npm run build --workspace=mcp",
     "start": "npm run start --workspace=server"
   },
   "allowScripts": {

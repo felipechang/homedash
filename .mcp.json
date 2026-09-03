@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "homedash": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/mnt/data/homedash/mcp/dist/index.js"
+      ],
+      "env": {}
+    }
+  }
+}
