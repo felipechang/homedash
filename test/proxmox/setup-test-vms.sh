@@ -181,7 +181,11 @@ ensure_test_vm() {
 
   qm start "$vmid"
   local ip; ip="$(wait_for_ip "$vmid")"
-  wait_for_ssh "$ip"
+  # cloud-init's package install (qemu-guest-agent) runs before the final
+  # stage on first boot, and sshd here waits on network-online.target, so
+  # under nested virtualization first boot can take several minutes longer
+  # than a normal boot before sshd actually answers.
+  wait_for_ssh "$ip" 600
 
   if [ "$backend" = "ifupdown" ]; then
     say "$name: switching to ifupdown so install.sh's other branch gets tested"
@@ -190,7 +194,7 @@ ensure_test_vm() {
     # the VM reboots itself at the end of that script
     sleep 5
     ip="$(wait_for_ip "$vmid")"
-    wait_for_ssh "$ip"
+    wait_for_ssh "$ip" 300
   fi
 
   say "$name is up at $ip (backend: $backend)"
