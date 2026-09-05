@@ -95,16 +95,23 @@ cmd_up() {
     done
     [ -n "$ip" ] || die "$VM_NAME never got a DHCP lease on $NET_NAME within ${timeout}s. Check with: virt-viewer --connect qemu:///system $VM_NAME"
 
-    wait_for_tcp "$ip" 22 600 || die "SSH on $ip never came up. The install may have failed — check: virt-viewer --connect qemu:///system $VM_NAME"
+    # First real boot after a fresh autoinstall does extra one-time setup
+    # (SSH host keys, pmxcfs init, ...) and can take a while longer than
+    # later boots under nested KVM — give it more room than a normal boot.
+    wait_for_tcp "$ip" 22 1200 || die "SSH on $ip never came up within 20min. Check with: virt-viewer --connect qemu:///system $VM_NAME. If it's actually up, re-run '$0 up' — provisioning (ssh key, snapshot, test scripts) resumes automatically since it's not tied to install."
     wait_for_tcp "$ip" 8006 300 || warn "Port 8006 (web UI) isn't answering yet on $ip — give it another minute."
+  fi
 
+  # Post-install provisioning below is idempotent (keyed off the 'clean'
+  # snapshot) and runs whether the VM was just created or already existed,
+  # so a run that dies after install but before this finishes can resume
+  # cleanly on the next '$0 up' instead of skipping it as "already exists".
+  local ip; ip="$(vm_ip || true)"
+  if [ -n "$ip" ] && ! virsh snapshot-list "$VM_NAME" 2>/dev/null | awk '{print $1}' | grep -qx clean; then
     say "Authorizing our SSH key on the Proxmox node ($ip)"
     sshpass -p "$(cat "$ROOT_PASSWORD_FILE")" ssh-copy-id \
       -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR \
       -i "$SSH_KEY.pub" "root@$ip" >/dev/null
-
-    say "Snapshotting $VM_NAME as 'clean' (freshly installed, nothing enrolled yet)"
-    virsh snapshot-create-as "$VM_NAME" clean "freshly installed Proxmox, before any hosts enrolled" >/dev/null
 
     say "Copying test/proxmox/ (the enrollment test-VM script) onto the node"
     ssh_pve "$ip" "mkdir -p /root/homedash-test/remote"
@@ -113,6 +120,9 @@ cmd_up() {
     scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -i "$SSH_KEY" \
       "$HERE/../proxmox/remote/flip-to-ifupdown.sh" "root@$ip:/root/homedash-test/remote/flip-to-ifupdown.sh"
     ssh_pve "$ip" "chmod +x /root/homedash-test/setup-test-vms.sh /root/homedash-test/remote/flip-to-ifupdown.sh"
+
+    say "Snapshotting $VM_NAME as 'clean' (freshly installed, nothing enrolled yet)"
+    virsh snapshot-create-as "$VM_NAME" clean "freshly installed Proxmox, before any hosts enrolled" >/dev/null
   fi
 
   echo

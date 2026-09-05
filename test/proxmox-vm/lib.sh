@@ -66,11 +66,22 @@ vm_mac() {
 }
 
 vm_ip() {
-  local mac; mac="$(vm_mac 2>/dev/null || true)"
+  local mac ip; mac="$(vm_mac 2>/dev/null || true)"
   [ -n "$mac" ] || return 1
-  virsh net-dhcp-leases "$NET_NAME" 2>/dev/null \
+  ip="$(virsh net-dhcp-leases "$NET_NAME" 2>/dev/null \
     | awk -v mac="$mac" 'tolower($0) ~ tolower(mac) {print $5}' \
-    | sed 's#/.*##' | head -n1
+    | sed 's#/.*##' | head -n1)"
+  if [ -z "$ip" ]; then
+    # After a snapshot revert the guest often resumes with its old IP
+    # already configured, without redoing a full DHCP handshake — so
+    # libvirt's lease table stays empty even though the guest is up and
+    # reachable. Fall back to the kernel's ARP/neighbor table, which only
+    # needs the guest to have sent any traffic, not a fresh DHCP exchange.
+    ip="$(virsh domifaddr "$VM_NAME" --source arp 2>/dev/null \
+      | awk -v mac="$mac" 'tolower($0) ~ tolower(mac) {print $4}' \
+      | sed 's#/.*##' | head -n1)"
+  fi
+  [ -n "$ip" ] && echo "$ip"
 }
 
 wait_for_tcp() {

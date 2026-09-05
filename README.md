@@ -27,6 +27,7 @@ exactly one address to remember. For development, `npm run dev` runs the API on
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `HOMEDASH_PORT` | `8080` | Listen port |
+| `HOMEDASH_BIND` | `0.0.0.0` | Listen address |
 | `HOMEDASH_DATA` | `./data` | SQLite DB, hub SSH key, pinned `known_hosts` |
 | `HOMEDASH_PUBLIC_URL` | derived from the request | Override the callback URL remotes are told to use |
 | `HOMEDASH_ENROLL_TTL_MS` | 30 min | How long an enrollment code stays valid |
