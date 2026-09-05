@@ -106,6 +106,27 @@ scp_to_vm() {
 
 # --------------------------------------------------------------- template --
 
+ensure_guest_agent_snippet() {
+  # Debian's genericcloud image doesn't ship qemu-guest-agent, so `qm guest
+  # cmd` (which wait_for_ip / cmd_status / cmd_ssh all depend on) never works
+  # without this, regardless of networking. Snippets need a storage with the
+  # 'snippets' content type; 'local' doesn't have it by default.
+  if ! pvesm status -storage local -content snippets >/dev/null 2>&1; then
+    local existing; existing="$(awk '/^dir: local$/{f=1} f&&/content/{print $2; exit}' /etc/pve/storage.cfg)"
+    pvesm set local --content "${existing:+$existing,}snippets"
+  fi
+
+  SNIPPET_PATH="local:snippets/homedash-test-cloudinit.yaml"
+  mkdir -p /var/lib/vz/snippets
+  cat > /var/lib/vz/snippets/homedash-test-cloudinit.yaml <<'EOF'
+#cloud-config
+packages:
+  - qemu-guest-agent
+runcmd:
+  - systemctl enable --now qemu-guest-agent
+EOF
+}
+
 ensure_template() {
   if vm_exists "$TEMPLATE_VMID"; then
     say "Template $TEMPLATE_VMID already exists, skipping."
@@ -119,6 +140,8 @@ ensure_template() {
     curl -fsSL "$DEBIAN_IMAGE_URL" -o "$image.part"
     mv "$image.part" "$image"
   fi
+
+  ensure_guest_agent_snippet
 
   say "Building template $TEMPLATE_VMID"
   qm create "$TEMPLATE_VMID" \
@@ -135,7 +158,7 @@ ensure_template() {
   qm set "$TEMPLATE_VMID" --boot order=scsi0
   qm resize "$TEMPLATE_VMID" scsi0 "$DISK_SIZE"
 
-  qm set "$TEMPLATE_VMID" --ciuser root --sshkeys "$SSH_KEY.pub" --ipconfig0 ip=dhcp
+  qm set "$TEMPLATE_VMID" --ciuser root --sshkeys "$SSH_KEY.pub" --ipconfig0 ip=dhcp --cicustom "user=$SNIPPET_PATH"
   qm template "$TEMPLATE_VMID"
   say "Template $TEMPLATE_VMID ready."
 }
